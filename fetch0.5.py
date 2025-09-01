@@ -25,7 +25,7 @@ def get_orderbook_ask_price(symbol):
     else:
         raise ValueError(f"No ask prices available for {symbol}")
 
-def monitor_orderbook(symbol="BTCIRT", interval=0):
+def monitor_orderbook(symbol="BTCIRT", interval=0.3):
     """
     Monitor bid then ask, print under each other, then show % spread.
     """
@@ -60,4 +60,4 @@ def monitor_orderbook(symbol="BTCIRT", interval=0):
         print("\n🛑 Monitoring stopped by user.")
 
 if __name__ == "__main__":
-    monitor_orderbook("BTCIRT", interval=0)
+    monitor_orderbook("BTCIRT", interval=0.3)

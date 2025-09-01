@@ -98,7 +98,7 @@ def fetch_and_display_changes():
 TEHRAN_TZ = pytz.timezone("Asia/Tehran")
 
 # CONFIGURATION
-TRADING_TOKEN = "aab7faf48d695400c6c2ef3f956b4c9fd6fa2c0c"
+TRADING_TOKEN = "7b1d8469ea5eca8bb6315884606a053b7515aed1"
 WALLET_BALANCE_URL = "https://apiv2.nobitex.ir/users/wallets/balance"
 ORDER_URL = "https://apiv2.nobitex.ir/market/orders/add"
 MARGIN_ORDER_URL = "https://apiv2.nobitex.ir/margin/orders/add"
@@ -761,7 +761,7 @@ def main_loop():
         seconds_since_midnight = (now - local_midnight).total_seconds()
         base_candle_index = int(seconds_since_midnight // period_seconds)
         next_candle_time = local_midnight + timedelta(seconds=(base_candle_index + 1) * period_seconds)
-        analysis_time = next_candle_time - timedelta(minutes=1.8)
+        analysis_time = next_candle_time - timedelta(minutes=1.85)
 
         if now > analysis_time:
             print("Analysis window passed for this cycle. Waiting for next cycle...")

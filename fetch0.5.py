@@ -36,9 +36,9 @@ def monitor_orderbook(symbol="BTCIRT", interval=0):
             cycle_start = time.monotonic()
             try:
                 bid = get_orderbook_bid_price(symbol)
-                #ask = get_orderbook_ask_price(symbol)
+                ask = get_orderbook_ask_price(symbol)
 
-                spread = 20000 - bid
+                spread = ask - bid
                 pct = (spread * 100.0) / bid if bid != 0 else 0
 
                 elapsed = time.monotonic() - cycle_start

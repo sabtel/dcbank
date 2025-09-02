@@ -98,7 +98,7 @@ def fetch_and_display_changes():
 TEHRAN_TZ = pytz.timezone("Asia/Tehran")
 
 # CONFIGURATION
-TRADING_TOKEN = "7b1d8469ea5eca8bb6315884606a053b7515aed1"
+TRADING_TOKEN = "df5bd1ad6e89af238b336f97d47ffe079a0c4a90"
 WALLET_BALANCE_URL = "https://apiv2.nobitex.ir/users/wallets/balance"
 ORDER_URL = "https://apiv2.nobitex.ir/market/orders/add"
 MARGIN_ORDER_URL = "https://apiv2.nobitex.ir/margin/orders/add"
@@ -1010,3 +1010,4 @@ if __name__ == "__main__":
             time.sleep(3)
     else:
         main_loop()
+

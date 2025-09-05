@@ -8,7 +8,7 @@ from sklearn.ensemble import GradientBoostingRegressor
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from requests.exceptions import Timeout as ReqTimeout
-
+import math
 
 # DAY-CHANGE FETCHER
 symbols_day_change = [
@@ -98,14 +98,26 @@ def fetch_and_display_changes():
 TEHRAN_TZ = pytz.timezone("Asia/Tehran")
 
 # CONFIGURATION
-TRADING_TOKEN = "6170a5ceecff1ce1342b5c219afa92cb2ffdc203"
+TRADING_TOKEN = "df5bd1ad6e89af238b336f97d47ffe079a0c4a90"
 WALLET_BALANCE_URL = "https://apiv2.nobitex.ir/users/wallets/balance"
 ORDER_URL = "https://apiv2.nobitex.ir/market/orders/add"
 MARGIN_ORDER_URL = "https://apiv2.nobitex.ir/margin/orders/add"
 MARGIN_CLOSE_URL = "https://apiv2.nobitex.ir/positions/{position_id}/close"
 
 # TECHNICAL ANALYSIS FUNCTIONS
+AUTO_SELECT_5 = True
+
 def get_user_timeframe():
+    """
+    If AUTO_SELECT_5 is True this will immediately return the 5-minute timeframe
+    (resolution "5", minutes_per_candle 5) without asking the user.
+    If AUTO_SELECT_5 is False, it falls back to the original interactive prompt.
+    """
+    if AUTO_SELECT_5:
+        print("Auto-selecting 5-minute timeframe (no prompt).")
+        return ("5", 5)
+
+    # original interactive prompt (kept for convenience)
     print("Select a timeframe:")
     print("1: 1 minute")
     print("2: 5 minutes")
@@ -594,47 +606,80 @@ def fetch_unrealized_pnl_percent(symbol: str, position_id: str) -> float:
     return 0.0
 
 
-def compute_pct_from_orderbook(symbol: str, avg: float, position_id: str | None = None, price: float | None = None) -> float:
+def compute_pct_from_orderbook(symbol: str, avg: float, position_id: str | None = None, price: float | None = None) -> float | None:
     """
-    Compute a pct value from orderbook prices using the provided price (formatted to 2 decimals)
-    as the denominator when available:
-     - if avg > 2.4 -> ((bid - ask) * 100) / formatted(price)  (fallback to ask if price is None)
-     - if avg < -2.4 -> ((ask - bid) * 100) / formatted(price) (fallback to bid if price is None)
-    If orderbook cannot be fetched and position_id is provided, fall back to fetch_unrealized_pnl_percent.
+    Returns a reliable pct value or None if not computable.
+    - Validates orderbook prices (ask/bid > 0).
+    - Protects against division by zero and spurious huge values.
+    - Falls back to server unrealizedPNLPercent only if it looks sane.
     """
     try:
         ask = get_orderbook_ask_price(symbol)
         bid = get_orderbook_bid_price(symbol)
 
-        # If a buy price was provided, use the formatted two-decimal price as denominator.
+        # sanity checks
+        if ask is None or bid is None:
+            raise ValueError("Orderbook returned no bid/ask")
+
+        if not (math.isfinite(ask) and math.isfinite(bid)):
+            raise ValueError("Non-finite orderbook prices")
+
+        # reject obviously bad prices (zero or negative)
+        if ask <= 0 or bid <= 0:
+            raise ValueError(f"Unreasonable orderbook prices: ask={ask}, bid={bid}")
+
+        # prepare denom price (use provided buy price first)
+        denom_price = None
         if price is not None:
             try:
                 denom_price = float(f"{float(price):.2f}")
+                if denom_price <= 0:
+                    denom_price = None
             except Exception:
-                # if conversion fails, fallback to None so we use orderbook price below
                 denom_price = None
-        else:
-            denom_price = None
 
+        pct = None
         if avg is not None and avg > 2.4:
             denom = denom_price if denom_price is not None else ask
+            if denom <= 0:
+                raise ZeroDivisionError("Denominator is zero/invalid")
             pct = ((bid - denom) * 100.0) / denom
         elif avg is not None and avg < -2.4:
             denom = denom_price if denom_price is not None else bid
+            if denom <= 0:
+                raise ZeroDivisionError("Denominator is zero/invalid")
             pct = ((ask - denom) * 100.0) / denom
         else:
-            pct = 0.0
+            # avg neutral -> don't compute orderbook pct
+            return None
+
+        # sanity clamp: reject NaN/inf and extremely large numbers (likely API glitch)
+        if pct is None or not math.isfinite(pct):
+            raise ValueError("Computed pct not finite")
+        if abs(pct) > 1000:   # arbitrary safety cap; adjust if you expect legitimate >1000%
+            print(f"Rejected spurious pct={pct:.2f} (clamped).")
+            return None
 
         return float(pct)
+
     except Exception as e:
-        print(f"Error computing pct from orderbook for {symbol}: {e}")
-        # fallback to API-based unrealized pnl percent if we have a position id
+        print(f"compute_pct_from_orderbook: orderbook error for {symbol}: {e}")
+        # fallback: try server-side unrealized PNL only if position_id supplied
         if position_id is not None:
             try:
-                return fetch_unrealized_pnl_percent(symbol, position_id)
+                fallback = fetch_unrealized_pnl_percent(symbol, position_id)
+                # validate fallback
+                if fallback is None or not math.isfinite(fallback):
+                    print("Fallback unrealizedPNLPercent not usable.")
+                    return None
+                # clamp unrealistic fallback values too
+                if abs(fallback) > 1000:
+                    print("Fallback unrealizedPNLPercent out of reasonable range; ignoring.")
+                    return None
+                return float(fallback)
             except Exception as e2:
-                print(f"Fallback fetch_unrealized_pnl_percent failed for {symbol}: {e2}")
-        return 0.0
+                print(f"Fallback fetch_unrealized_pnl_percent failed: {e2}")
+        return None
 
 
 
@@ -924,6 +969,10 @@ def main_loop():
                         neg_threshold = -0.65 - (0.10 * days_passed)
 
                         pct = compute_pct_from_orderbook(sym, avg, position_id, price=res.get("buy_price"))
+                        if pct is None:
+                            print(f"  Could not compute reliable PCT for {sym} — skipping this iteration.   ", end="\r")
+                            time.sleep(0.4)
+                            continue
                         print(f"  Computed PCT (orderbook-based): {pct:.2f}%   ", end="\r")
                         if (avg > 2.4 and pct > pos_threshold) or pct <= -4:
                             print(f"\nTarget reached ({pct:.2f}%). Closing {sym}…")
@@ -1010,5 +1059,3 @@ if __name__ == "__main__":
             time.sleep(3)
     else:
         main_loop()
-
-

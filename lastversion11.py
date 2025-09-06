@@ -728,10 +728,10 @@ symbols = [
     "1M_PEPEIRT", "100K_FLOKIIRT", "NOTIRT", "API3IRT", "ZRXIRT",
     "CVXIRT", "ENSIRT", "SNTIRT", "STORJIRT", "SLPIRT", "CRVIRT",
     "AAVEIRT", "XMRIRT", "LDOIRT", "DYDXIRT", "APTIRT", "MAGICIRT",
-    "CHZIRT", "XAUTIRT", "ATOMIRT", "NEARIRT", "FILIRT", "LINKIRT",
+    "CHZIRT", "ATOMIRT", "NEARIRT", "FILIRT", "LINKIRT",
     "DOTIRT", "UNIIRT", "XLMIRT", "GMTIRT", "POLIRT", "AVAXIRT",
     "SOLIRT", "ETCIRT", "BCHIRT", "LTCIRT", "TRXIRT", "ADAIRT",
-    "DOGEIRT", "XRPIRT", "BNBIRT", "ETHIRT", "BTCIRT", "TONIRT",
+    "DOGEIRT", "XRPIRT", "BNBIRT", "TONIRT",
     "ARBIRT", "1k_SHIBIRT", "ONEIRT", "HBARIRT","RENDERIRT"
 ]
 
@@ -1059,5 +1059,6 @@ if __name__ == "__main__":
             time.sleep(3)
     else:
         main_loop()
+
 
 

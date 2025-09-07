@@ -896,7 +896,7 @@ def main_loop():
                     r for r in analysis_results
                     if abs(r["stoch_rsi_blue"]) < EPSILON
                     and r.get("stoch_rsi_blue_15h") is not None
-                    and r["stoch_rsi_blue_15h"] < 20.00
+                    and r["stoch_rsi_blue_15h"] < 10.00
                 ]
             else:
         
@@ -915,7 +915,7 @@ def main_loop():
                     r for r in analysis_results
                     if r["stoch_rsi_blue"] == 100.00
                     and r.get("stoch_rsi_blue_15h") is not None
-                    and r["stoch_rsi_blue_15h"] > 80.00
+                    and r["stoch_rsi_blue_15h"] > 90.00
                 ]
             else:
                 candidates = [r for r in analysis_results if r["stoch_rsi_blue"] == 0.00]
@@ -1059,6 +1059,7 @@ if __name__ == "__main__":
             time.sleep(3)
     else:
         main_loop()
+
 
 
 
